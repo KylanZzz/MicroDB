@@ -16,21 +16,31 @@ class Btree {
 
 private:
 
-    struct rowHeader {
-        int pageNo;
-        size_t numAttributes;
-        vector<Constants::Types>* rowTypeOrder;
-        ~rowHeader() { delete rowTypeOrder; }
-    };
+    // 4 bytes pageNo ---- 8 bytes numAttributes --
+    // -- 4 bytes (size of enum) * (# attributes)
+//    struct pageHeader {
+//        int pageNo;
+//        int numAttributes;
+//        vector<Constants::Types>* rowTypeOrder;
+//        ~pageHeader() { delete rowTypeOrder; }
+//    };
 
 public:
+    struct pageHeader {
+        int pageNo;
+        int numAttributes;
+        vector<Constants::Types>* rowTypeOrder;
+        ~pageHeader() { delete rowTypeOrder; }
+    };
+
     static vector<dataType>* deserializeRow(vector<byte>& fileContents,
-                                     size_t startIndex,
+                                            int startIndex,
                                      vector<Constants::Types>& typeOrder);
 
     static vector<byte>* serializeRow(vector<dataType>& data,
                                       vector<Constants::Types>& typeOrder);
 
-    static rowHeader* deserializeHeader(vector<byte>& fileContents);
+    static pageHeader* deserializeHeader(vector<byte>& fileContents);
 
+    static vector<byte>* serializeHeader(pageHeader& pageHeader);
 };

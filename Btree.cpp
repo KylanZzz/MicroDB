@@ -11,7 +11,7 @@ using dataType = std::variant<int, bool, char>;
 
 // deserializes a string of bytes into their respective data types given a list of types in order
 vector<dataType>* Btree::deserializeRow(
-        vector<byte>& fileContents, size_t startIndex, vector<Constants::Types>& typeOrder) {
+        vector<byte>& fileContents, int startIndex, vector<Constants::Types>& typeOrder) {
 
     auto output = new vector<dataType>(typeOrder.size());
 
@@ -55,23 +55,23 @@ vector<dataType>* Btree::deserializeRow(
 vector<byte>* Btree::serializeRow(
         vector<dataType> &data, vector<Constants::Types>& typeOrder) {
 
-    size_t byteSize = 0;
+    size_t numBytes = 0;
     for (auto type: typeOrder) {
         switch (type) {
             case Constants::Types::BOOLEAN:
-                byteSize += sizeof (bool);
+                numBytes += sizeof (bool);
                 break;
             case Constants::INTEGER:
-                byteSize += sizeof (int);
+                numBytes += sizeof (int);
                 break;
             case Constants::CHAR:
-                byteSize += sizeof (char);
+                numBytes += sizeof (char);
                 break;
         }
     }
 
-    auto outputContent = new vector<byte>(byteSize);
-    size_t offset = 0;
+    auto outputContent = new vector<byte>(numBytes);
+    int offset = 0;
 
     for (int i = 0; i < typeOrder.size(); ++i) {
         switch (typeOrder[i]) {
@@ -100,27 +100,49 @@ vector<byte>* Btree::serializeRow(
 }
 
 // deserializes a header in order of the attributes in rowHeader
-Btree::rowHeader* Btree::deserializeHeader(vector<byte> &fileContents) {
+Btree::pageHeader* Btree::deserializeHeader(vector<byte> &fileContents) {
     int currOffset = 0;
 
     int pageNo;
     std::memcpy(&pageNo, fileContents.data() + currOffset, sizeof (pageNo));
     currOffset += sizeof (pageNo);
 
-    size_t numAttributes;
+    int numAttributes;
     std::memcpy(&numAttributes, fileContents.data() + currOffset, sizeof (numAttributes));
     currOffset += sizeof (numAttributes);
 
-    vector<Constants::Types> rowTypeOrder (numAttributes);
+    auto rowTypeOrder = new vector<Constants::Types>(numAttributes);
     for (int i = 0; i < numAttributes; ++i) {
         Constants::Types dataType;
         std::memcpy(&(dataType), fileContents.data() + currOffset, sizeof (Constants::Types));
 
-        rowTypeOrder[i] = dataType;
+        (*rowTypeOrder)[i] = dataType;
         currOffset += sizeof (Constants::Types);
     }
 
-    auto header = new rowHeader{pageNo, numAttributes, &rowTypeOrder};
+    auto header = new pageHeader{pageNo, numAttributes, rowTypeOrder};
 
     return header;
+}
+
+vector<byte>* Btree::serializeHeader(Btree::pageHeader& header) {
+    size_t size = sizeof(header.pageNo) +
+            sizeof(header.numAttributes) +
+            (header.numAttributes * sizeof(Constants::Types));
+
+    auto fileHeaderBytes = new vector<byte>(size);
+    int offset = 0;
+
+    std::memcpy(fileHeaderBytes->data() + offset, &(header.pageNo), sizeof(header.pageNo));
+    offset += sizeof(header.pageNo);
+
+    std::memcpy(fileHeaderBytes->data() + offset, &(header.numAttributes), sizeof(header.numAttributes));
+    offset += sizeof(header.numAttributes);
+
+    for (int i = 0; i < header.numAttributes; ++i) {
+        std::memcpy(fileHeaderBytes->data() + offset, &((*header.rowTypeOrder)[i]), sizeof(Constants::Types));
+        offset += sizeof (Constants::Types);
+    }
+
+    return fileHeaderBytes;
 }
