@@ -7,6 +7,7 @@
 #include <vector>
 #include <variant>
 #include "Constants.h"
+#include "Pager.h"
 
 using std::vector;
 using std::byte;
@@ -15,32 +16,29 @@ using dataType = std::variant<int, bool, char>;
 class Btree {
 
 private:
-
-    // 4 bytes pageNo ---- 8 bytes numAttributes --
-    // -- 4 bytes (size of enum) * (# attributes)
-//    struct pageHeader {
-//        int pageNo;
-//        int numAttributes;
-//        vector<Constants::Types>* rowTypeOrder;
-//        ~pageHeader() { delete rowTypeOrder; }
-//    };
+    vector<Constants::Types>* rowTypeOrder; // only valid if IS isLeaf
+    std::string tableName;
+    size_t rowSize;
+    vector<byte>* root;
 
 public:
-    struct pageHeader {
+    struct NodeHeader {
         int pageNo;
-        int numAttributes;
-        vector<Constants::Types>* rowTypeOrder;
-        ~pageHeader() { delete rowTypeOrder; }
+        bool isLeaf;
+        bool isRoot;
+
+        int parentNo; // only valid if NOT root
+        int numRows; // only valid if IS leaf
     };
 
-    static vector<dataType>* deserializeRow(vector<byte>& fileContents,
-                                            int startIndex,
-                                     vector<Constants::Types>& typeOrder);
 
-    static vector<byte>* serializeRow(vector<dataType>& data,
-                                      vector<Constants::Types>& typeOrder);
+    Btree(vector<Constants::Types>* rowTypeOrder, std::string& name);
 
-    static pageHeader* deserializeHeader(vector<byte>& fileContents);
+    vector<dataType>* deserializeRow(vector<byte>& pageContents, int offset);
 
-    static vector<byte>* serializeHeader(pageHeader& pageHeader);
+    vector<byte>* serializeRow(vector<dataType>& data);
+
+    NodeHeader* deserializeHeader(vector<byte>& page);
+
+    vector<byte>* serializeHeader(NodeHeader& NodeHeader);
 };

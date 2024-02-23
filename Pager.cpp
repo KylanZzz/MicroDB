@@ -9,11 +9,12 @@
 Pager::Pager() {
     buffer = std::vector<Page*>();
     ioHandler = new IOHandler();
+    numPages = 0;
 }
 
 // looks for and returns pointer to page
 // if page doesn't exist, then find it in disk and add a copy of it to memory
-Pager::Page* Pager::getPage(int pageNo) {
+Pager::Page* Pager::getPage(size_t pageNo) {
     // if page does exist in buffer pool
     for (Page* page: buffer) {
         if (page->pageNo == pageNo) {
@@ -39,15 +40,14 @@ Pager::Page* Pager::getPage(int pageNo) {
 // creates a new empty page in disk and stores it in buffer pool
 Pager::Page* Pager::makeNewPage() {
     auto data = new std::vector<std::byte>(Constants::PAGE_SIZE);
-    int pageNo = ioHandler->addBlock(data);
+    size_t pageNo = ioHandler->addBlock(data);
     Page* newPage = new Page(data, pageNo);
     numPages++;
     return newPage;
 }
 
-Pager::~Pager() {
+Pager::~Pager(){
+    /// delete storageManager first so that changes to pageDirectory are written before flushing
+    delete sStorageManager;
     delete ioHandler;
-    for (Page* page: buffer) {
-        delete page;
-    }
 }

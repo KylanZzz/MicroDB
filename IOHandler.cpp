@@ -37,7 +37,7 @@ int IOHandler::openFile(const std::string& fileName) {
 }
 
 // adds a new block of data to file and returns the block index
-int IOHandler::addBlock(std::vector<std::byte> *dataBuffer) {
+size_t IOHandler::addBlock(std::vector<std::byte> *dataBuffer) {
     pwrite(fileDescriptor, dataBuffer->data(), Constants::PAGE_SIZE, numBlocks * Constants::PAGE_SIZE);
     return numBlocks++;
 }

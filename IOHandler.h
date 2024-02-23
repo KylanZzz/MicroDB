@@ -14,14 +14,14 @@ public:
     ~IOHandler();
 
     void writeBlock(std::vector<std::byte>* dataBuffer, size_t blockIndex);
-    int addBlock(std::vector<std::byte>* dataBuffer);
+    size_t addBlock(std::vector<std::byte>* dataBuffer);
     void getBlock(std::vector<std::byte>* dataBuffer, size_t blockIndex);
     int openFile(const std::string& fileName);
-    int getNumBlocks() { return numBlocks; }
+    size_t getNumBlocks() { return numBlocks; }
 
 
 private:
     int fileDescriptor;
-    int numBlocks;
+    size_t numBlocks;
 };
 
