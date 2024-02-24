@@ -21,7 +21,6 @@ private:
     size_t rowSize;
     vector<byte>* root;
 
-public:
     struct NodeHeader {
         int pageNo;
         bool isLeaf;
@@ -30,6 +29,8 @@ public:
         int parentNo; // only valid if NOT root
         int numRows; // only valid if IS leaf
     };
+
+public:
 
 
     Btree(vector<Constants::Types>* rowTypeOrder, std::string& name);

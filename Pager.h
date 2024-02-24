@@ -16,7 +16,11 @@
 class Pager {
 
 private:
-    static Pager* INSTANCE;
+    /// prevent a bunch of copy constructors/move assignments
+    Pager(const Pager& obj) = delete;
+    Pager& operator=(const Pager& obj) = delete;
+    Pager(Pager&&) = delete;
+    Pager& operator=(Pager&&) = delete;
 
     struct Page {
         std::vector<std::byte>* contents;
@@ -32,21 +36,16 @@ private:
     ~Pager();
 
 public:
-    /// delete a bunch of copy constructors/move assignments
-    Pager(const Pager& obj) = delete;
-    Pager& operator=(const Pager& obj) = delete;
-    Pager(Pager&&) = delete;
-    Pager& operator=(Pager&&) = delete;
 
-    static Pager* getInstance() {
-        if (INSTANCE == nullptr) {
-            INSTANCE = new Pager();
-        }
+    static Pager& getInstance()
+    {
+        static Pager INSTANCE;
         return INSTANCE;
     }
 
     Page* getPage(size_t pageNo);
     Page* makeNewPage();
+    void writePage(size_t pageNo);
 
 private:
     std::vector<Page*> buffer;

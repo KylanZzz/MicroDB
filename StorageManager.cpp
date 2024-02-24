@@ -4,24 +4,25 @@
 
 #include "StorageManager.h"
 
+
 StorageManager::StorageManager() {
-    pageDirectory = sPager->getPage(Constants::PageNo::PAGE_DIRECTORY)->contents;
+    pageDirectory = sPager.getPage(Constants::PageNo::PAGE_DIRECTORY)->contents;
 
-    //// process the pageDirectory, storing each page along with its # free bytes in a list
+    /// process the pageDirectory, storing each page along with its # free bytes in a list
 
-    int offset = 0;
-    int numPages;
+    size_t offset = 0;
+    size_t numPages;
     std::memcpy(&numPages, pageDirectory->data() + offset, sizeof(numPages));
     offset += sizeof(numPages);
 
     tuplePages = new vector<std::pair<size_t, size_t>>(numPages);
     for (auto & tuplePage : *tuplePages) {
-        //// initialize each page of pageDirectory
-        int pageNo;
+        /// initialize each page of pageDirectory
+        size_t pageNo;
         memcpy(&pageNo, pageDirectory->data() + offset, sizeof(pageNo));
         offset += sizeof(pageNo);
 
-        int freeSpace;
+        size_t freeSpace;
         memcpy(&freeSpace, pageDirectory->data() + offset, sizeof(freeSpace));
         offset += sizeof(freeSpace);
 
@@ -35,11 +36,8 @@ StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
         size_t pageNo = tuplePage.first;
         size_t spaceLeft = tuplePage.second;
         if (spaceLeft >= data->size()) {
-            /// IMPORTANT: assuming that heap files are stored top down,
-            /// with no header and only tuples information
-
             /// get page from pager
-            auto page = sPager->getPage(pageNo);
+            auto page = sPager.getPage(pageNo);
 
             /// insert data
             size_t offset = Constants::PAGE_SIZE - spaceLeft;
@@ -53,7 +51,7 @@ StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
     }
 
     /// if there is not enough free space in ANY of the pages, make a new one
-    auto newPage = sPager->makeNewPage();
+    auto newPage = sPager.makeNewPage();
 
     /// insert data
     std::memcpy(newPage->contents->data(),data->data(), data->size());
@@ -68,9 +66,6 @@ StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
 void StorageManager::deleteTuple(StorageManager::RowPointer row) {
 
 }
-
-
-
 
 StorageManager::~StorageManager() {
     /// update page directory
@@ -91,6 +86,5 @@ StorageManager::~StorageManager() {
     }
 
     /// free memory
-    delete pageDirectory;
     delete tuplePages;
 }

@@ -15,7 +15,11 @@ using std::byte;
 class StorageManager {
 
 private:
-    static StorageManager* INSTANCE;
+    /// prevent a bunch of copy constructors/move assignments
+    StorageManager(const StorageManager& obj) = delete;
+    StorageManager& operator=(const StorageManager& obj) = delete;
+    StorageManager(StorageManager&&) = delete;
+    StorageManager& operator=(StorageManager&&) = delete;
 
     struct RowPointer {
         size_t pageNo;
@@ -24,26 +28,18 @@ private:
     };
 
     StorageManager();
-
-public:
-    /// this is temporary, i know this is bad practice; will change later
     ~StorageManager();
 
-    /// delete a bunch of copy constructors/move assignments
-    StorageManager(const StorageManager& obj) = delete;
-    StorageManager& operator=(const StorageManager& obj) = delete;
-    StorageManager(StorageManager&&) = delete;
-    StorageManager& operator=(StorageManager&&) = delete;
+public:
 
-    static StorageManager* getInstance() {
-        if (INSTANCE == nullptr) {
-            INSTANCE = new StorageManager();
-        }
+    static StorageManager& getInstance()
+    {
+        static StorageManager INSTANCE;
         return INSTANCE;
     }
 
     RowPointer insertTuple(vector<byte>* data);
-    void deleteTuple(RowPointer cursor);
+    void deleteTuple(RowPointer row);
 
 private:
     vector<byte>* pageDirectory;
