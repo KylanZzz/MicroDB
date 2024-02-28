@@ -14,8 +14,8 @@ using std::endl;
 using std::byte;
 using std::vector;
 
-// test serializeRow
-// jank af gpt test code
+// tests serializeRow
+// jank af gpt tests code
 int main() {
     /// flush file data
     /*
@@ -39,7 +39,7 @@ int main() {
     rowTypeOrder.push_back(Constants::Types::BOOLEAN);
     rowTypeOrder.push_back(Constants::Types::INTEGER);
 
-    std::string tableName = "test table";
+    std::string tableName = "tests table";
     Btree btree(&rowTypeOrder, tableName);
 
     vector<dataType> row;
@@ -47,7 +47,7 @@ int main() {
     row.push_back(1300510961);
 
     auto binaryData = btree.serializeRow(row);
-    for (int i = 0; i < 3000; ++i) {
+    for (int i = 0; i < 2; ++i) {
         auto rowPointer = sStorageManager.insertTuple(binaryData);
 
         cout << "INSERTED ROW: " << rowPointer.pageNo << ", " << rowPointer.offset << ", " << rowPointer.size << endl;
