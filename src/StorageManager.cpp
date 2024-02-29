@@ -31,6 +31,8 @@ StorageManager::StorageManager() {
 
 }
 
+///  inserts a tuple into the file heap and returns a rowPointer (page & offset) to the tuple
+/// IMPORTANT: right now changes are written every insertion, which may not be the most optimal
 StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
     for (auto & tuplePage : *tuplePages) {
         size_t pageNo = tuplePage.first;
@@ -46,6 +48,7 @@ StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
             /// adjust spaceLeft offset
             tuplePage.second = tuplePage.second - data->size();
 
+            sPager.writePage(pageNo);
             return RowPointer{pageNo, offset, data->size()};
         }
     }
@@ -59,8 +62,8 @@ StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
     /// add data into tuplePages
     tuplePages->emplace_back(newPage->pageNo, Constants::PAGE_SIZE - data->size());
 
+    sPager.writePage(newPage->pageNo);
     return RowPointer {newPage->pageNo, 0, data->size()};
-
 }
 
 void StorageManager::deleteTuple(StorageManager::RowPointer row) {

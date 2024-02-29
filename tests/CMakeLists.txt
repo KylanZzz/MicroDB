@@ -13,6 +13,15 @@ FetchContent_MakeAvailable(catch2)
 
 add_executable(tests
         test.cpp
+        ../src/Btree.h
+        ../src/Btree.cpp
+        ../src/StorageManager.cpp
+        ../src/StorageManager.h
+        ../src/Pager.cpp
+        ../src/Pager.h
+        ../src/IOHandler.cpp
+        ../src/IOHandler.h
+        ../src/Constants.h
 )
 
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)

@@ -18,17 +18,17 @@ IOHandler::IOHandler() {
 }
 
 /// takes in an existing page and writes it to disk
+/// IMPORTANT right now I'm flushing changes after every write (for testing purposes) but may not be the most optimal
 void IOHandler::writeBlock(std::vector<std::byte>* dataBuffer, size_t blockIndex) {
 
-    std::cout << "bytes wrote to disk: " << pwrite(fileDescriptor, dataBuffer->data(),
-           Constants::PAGE_SIZE, blockIndex * Constants::PAGE_SIZE);
+    pwrite(fileDescriptor, dataBuffer->data(),Constants::PAGE_SIZE, blockIndex * Constants::PAGE_SIZE);
+    fsync(fileDescriptor);
 }
 
 /// copies disk block into a page contents
 void IOHandler::getBlock(std::vector<std::byte>* dataBuffer, size_t blockIndex) {
 
-    std::cout << "bytes read from disk: " << pread(fileDescriptor, dataBuffer->data(),
-                       Constants::PAGE_SIZE, blockIndex * Constants::PAGE_SIZE);
+    pread(fileDescriptor, dataBuffer->data(),Constants::PAGE_SIZE, blockIndex * Constants::PAGE_SIZE);
 }
 
 /// opens a file for both reading and writing, returning the file descriptor

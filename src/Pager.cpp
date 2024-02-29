@@ -17,6 +17,7 @@ Pager::Pager() {
 /// if page doesn't exist, then find it in disk and add a copy of it to memory
 Pager::Page* Pager::getPage(size_t pageNo) {
     /// if page does exist in buffer pool
+    /// this is done very inefficiently right now
     for (Page* page: buffer) {
         if (page->pageNo == pageNo) {
             return page;
@@ -24,8 +25,8 @@ Pager::Page* Pager::getPage(size_t pageNo) {
     }
 
     /// if the block doesn't exist in disk
-    if (ioHandler->getNumBlocks() < pageNo) {
-        std::cout << "REQUESTED PAGE DOES NOT EXIST" << std::endl;
+    if (ioHandler->getNumBlocks() <= pageNo) {
+        std::cout << "ERROR: REQUESTED PAGE DOES NOT EXIST [Pager]" << std::endl;
         return nullptr;
     }
 
@@ -44,6 +45,8 @@ Pager::Page* Pager::makeNewPage() {
     size_t pageNo = ioHandler->addBlock(data);
     Page* newPage = new Page(data, pageNo);
     numPages++;
+    buffer.push_back(newPage);
+
     return newPage;
 }
 
