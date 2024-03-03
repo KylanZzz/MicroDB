@@ -11,6 +11,6 @@ add_executable(MicroDB main.cpp
         Constants.h
         Btree.h
         Btree.cpp
-        StorageManager.h
-        StorageManager.cpp
+        FileHeap.h
+        FileHeap.cpp
 )

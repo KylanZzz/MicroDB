@@ -7,19 +7,19 @@
 #include <vector>
 #include "Pager.h"
 
-#define sStorageManager StorageManager::getInstance()
+#define sFileHeap FileHeap::getInstance()
 
 using std::vector;
 using std::byte;
 
-class StorageManager {
+class FileHeap {
 
 private:
     /// prevent a bunch of copy constructors/move assignments
-    StorageManager(const StorageManager& obj) = delete;
-    StorageManager& operator=(const StorageManager& obj) = delete;
-    StorageManager(StorageManager&&) = delete;
-    StorageManager& operator=(StorageManager&&) = delete;
+    FileHeap(const FileHeap& obj) = delete;
+    FileHeap& operator=(const FileHeap& obj) = delete;
+    FileHeap(FileHeap&&) = delete;
+    FileHeap& operator=(FileHeap&&) = delete;
 
     struct RowPointer {
         size_t pageNo;
@@ -27,15 +27,23 @@ private:
         size_t size;
     };
 
-    StorageManager();
-    ~StorageManager();
+    FileHeap();
+    ~FileHeap();
+
+    static FileHeap* INSTANCE;
 
 public:
 
-    static StorageManager& getInstance()
-    {
-        static StorageManager INSTANCE;
+    static FileHeap* getInstance() {
+        if (INSTANCE == nullptr) {
+            INSTANCE = new FileHeap();
+        }
         return INSTANCE;
+    }
+
+    static void deleteInstance() {
+        delete INSTANCE;
+        INSTANCE = nullptr;
     }
 
     RowPointer insertTuple(vector<byte>* data);

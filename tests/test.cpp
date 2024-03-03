@@ -3,7 +3,7 @@
 //
 
 #define CATCH_CONFIG_MAIN
-#include "../src/StorageManager.h"
+#include "../src/FileHeap.h"
 #include "../src/Btree.h"
 #include "iostream"
 #include <fcntl.h>
@@ -19,7 +19,7 @@ using std::byte;
 using std::vector;
 
 
-TEST_CASE("Storage Manager inserts into Heap Files", "[StorageManager]") {
+TEST_CASE("Storage Manager inserts into Heap Files", "[FileHeap]") {
 
     /* deletes existing DB file */
     unlink(Constants::DATABASE_FILE.c_str());
@@ -40,15 +40,14 @@ TEST_CASE("Storage Manager inserts into Heap Files", "[StorageManager]") {
     close(fd);
 
     sPager;
-    sStorageManager;
-
+    sFileHeap;
 
     /* test one tuple */
     auto* insertionData = new vector<byte>(8);
     for (int i = 0; i < insertionData->size(); ++i) {
         (*insertionData)[i] = makeByte((i + 1) * 10);
     }
-    auto rowPointer = sStorageManager.insertTuple(insertionData);
+    auto rowPointer = sFileHeap->insertTuple(insertionData);
 
     int fd2 = open(Constants::DATABASE_FILE.c_str(), O_RDONLY);
     auto* actualData = new vector<byte>(8);
@@ -65,12 +64,15 @@ TEST_CASE("Storage Manager inserts into Heap Files", "[StorageManager]") {
     for (int i = 0; i < insertionData2->size(); ++i) {
         (*insertionData2)[i] = makeByte(i);
     }
-    auto rowPointer2 = sStorageManager.insertTuple(insertionData2);
+    auto rowPointer2 = sFileHeap->insertTuple(insertionData2);
 
     int fd3 = open(Constants::DATABASE_FILE.c_str(), O_RDONLY);
     auto* actualData2 = new vector<byte>(3000);
     pread(fd3, actualData2->data(), rowPointer2.size, (rowPointer2.pageNo * Constants::PAGE_SIZE) + rowPointer2.offset);
     close(fd3);
+
+    sPager;
+    sFileHeap;
 
     REQUIRE(rowPointer2.pageNo == 2);
     REQUIRE(rowPointer2.offset == 8);
@@ -82,7 +84,7 @@ TEST_CASE("Storage Manager inserts into Heap Files", "[StorageManager]") {
     for (int i = 0; i < insertionData3->size(); ++i) {
         (*insertionData3)[i] = makeByte(i);
     }
-    auto rowPointer3 = sStorageManager.insertTuple(insertionData3);
+    auto rowPointer3 = sFileHeap->insertTuple(insertionData3);
 
     int fd4 = open(Constants::DATABASE_FILE.c_str(), O_RDONLY);
     auto* actualData3 = new vector<byte>(3000);
@@ -92,6 +94,9 @@ TEST_CASE("Storage Manager inserts into Heap Files", "[StorageManager]") {
     REQUIRE(rowPointer3.pageNo == 3);
     REQUIRE(rowPointer3.offset == 0);
     REQUIRE((*actualData3) == (*insertionData3));
+
+    FileHeap::deleteInstance();
+    Pager::deleteInstance();
 }
 
 TEST_CASE("Pager createNewPage works", "[Pager]") {
@@ -113,16 +118,21 @@ TEST_CASE("Pager createNewPage works", "[Pager]") {
     fsync(fd);
     close(fd);
 
+    sPager;
+    sFileHeap;
 
     // there are 2 pages by default (root & page directory) so the next page to be made is the third
     // page with a pageNo of 2 (0-indexed counting)
-    auto newPage = sPager.makeNewPage();
-    auto retrievedPage = sPager.getPage(2);
+    auto newPage = sPager->makeNewPage();
+    auto retrievedPage = sPager->getPage(2);
     REQUIRE(retrievedPage == newPage);
 
     auto emptyContents = new vector<byte>(Constants::PAGE_SIZE, makeByte(0));
     REQUIRE(*emptyContents == *(retrievedPage->contents));
     REQUIRE(*emptyContents == *(newPage->contents));
+
+    FileHeap::deleteInstance();
+    Pager::deleteInstance();
 }
 
 TEST_CASE("Pager writes page to disk works", "[Pager]") {
@@ -144,12 +154,14 @@ TEST_CASE("Pager writes page to disk works", "[Pager]") {
     fsync(fd);
     close(fd);
 
+    sPager;
+    sFileHeap;
 
-    auto firstPage = sPager.getPage(0);
+    auto firstPage = sPager->getPage(0);
     for (int i = 0; i < firstPage->contents->size(); ++i) {
         (*(firstPage->contents))[i] = makeByte(i % 100);
     }
-    sPager.writePage(0);
+    sPager->writePage(0);
 
     int fd2 = open(Constants::DATABASE_FILE.c_str(), O_RDONLY);
     auto outputData = new vector<byte>(Constants::PAGE_SIZE);
@@ -159,4 +171,7 @@ TEST_CASE("Pager writes page to disk works", "[Pager]") {
         auto byte = (*(outputData))[i];
         REQUIRE(byte == makeByte(i % 100));
     }
+
+    FileHeap::deleteInstance();
+    Pager::deleteInstance();
 }

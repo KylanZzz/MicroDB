@@ -7,7 +7,7 @@
 #include <cstddef>
 #include "vector"
 #include "IOHandler.h"
-#include "StorageManager.h"
+#include "FileHeap.h"
 
 #define sPager Pager::getInstance()
 
@@ -35,12 +35,20 @@ private:
     Pager();
     ~Pager();
 
+    static Pager* INSTANCE;
+
 public:
 
-    static Pager& getInstance()
-    {
-        static Pager INSTANCE;
+    static Pager* getInstance() {
+        if (INSTANCE == nullptr) {
+            INSTANCE = new Pager();
+        }
         return INSTANCE;
+    }
+
+    static void deleteInstance() {
+        delete INSTANCE;
+        INSTANCE = nullptr;
     }
 
     Page* getPage(size_t pageNo);

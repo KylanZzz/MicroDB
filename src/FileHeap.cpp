@@ -2,11 +2,13 @@
 // Created by Kylan Chen on 2/22/24.
 //
 
-#include "StorageManager.h"
+#include "FileHeap.h"
+#include "iostream"
 
+FileHeap* FileHeap::INSTANCE = nullptr;
 
-StorageManager::StorageManager() {
-    pageDirectory = sPager.getPage(Constants::PageNo::PAGE_DIRECTORY)->contents;
+FileHeap::FileHeap() {
+    pageDirectory = sPager->getPage(Constants::PageNo::PAGE_DIRECTORY)->contents;
 
     /// process the pageDirectory, storing each page along with its # free bytes in a list
 
@@ -33,13 +35,13 @@ StorageManager::StorageManager() {
 
 ///  inserts a tuple into the file heap and returns a rowPointer (page & offset) to the tuple
 /// IMPORTANT: right now changes are written every insertion, which may not be the most optimal
-StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
+FileHeap::RowPointer FileHeap::insertTuple(vector<byte>* data) {
     for (auto & tuplePage : *tuplePages) {
         size_t pageNo = tuplePage.first;
         size_t spaceLeft = tuplePage.second;
         if (spaceLeft >= data->size()) {
             /// get page from pager
-            auto page = sPager.getPage(pageNo);
+            auto page = sPager->getPage(pageNo);
 
             /// insert data
             size_t offset = Constants::PAGE_SIZE - spaceLeft;
@@ -48,13 +50,13 @@ StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
             /// adjust spaceLeft offset
             tuplePage.second = tuplePage.second - data->size();
 
-            sPager.writePage(pageNo);
+            sPager->writePage(pageNo);
             return RowPointer{pageNo, offset, data->size()};
         }
     }
 
     /// if there is not enough free space in ANY of the pages, make a new one
-    auto newPage = sPager.makeNewPage();
+    auto newPage = sPager->makeNewPage();
 
     /// insert data
     std::memcpy(newPage->contents->data(),data->data(), data->size());
@@ -62,15 +64,17 @@ StorageManager::RowPointer StorageManager::insertTuple(vector<byte>* data) {
     /// add data into tuplePages
     tuplePages->emplace_back(newPage->pageNo, Constants::PAGE_SIZE - data->size());
 
-    sPager.writePage(newPage->pageNo);
+    sPager->writePage(newPage->pageNo);
     return RowPointer {newPage->pageNo, 0, data->size()};
 }
 
-void StorageManager::deleteTuple(StorageManager::RowPointer row) {
+void FileHeap::deleteTuple(FileHeap::RowPointer row) {
 
 }
 
-StorageManager::~StorageManager() {
+FileHeap::~FileHeap() {
+    std::cout << "DELETING FILE HEAP" << std::endl;
+
     /// update page directory
     size_t offset = 0;
 

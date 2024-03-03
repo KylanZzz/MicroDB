@@ -21,13 +21,16 @@ private:
     size_t rowSize;
     vector<byte>* root;
 
-    struct NodeHeader {
-        int pageNo;
-        bool isLeaf;
-        bool isRoot;
+    size_t NODE_HEADER_SIZE = sizeof (size_t) + sizeof(bool) + sizeof(bool) + sizeof(size_t) + sizeof(size_t);
+    size_t NODE_SIZE = 0;
 
-        int parentNo; // only valid if NOT root
-        int numRows; // only valid if IS leaf
+    struct NodeHeader {
+        size_t pageNo;
+        bool isRoot;
+        size_t parentNo; // only valid if NOT root
+    };
+
+    struct NodeCell {
     };
 
 public:

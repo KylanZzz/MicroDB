@@ -15,8 +15,8 @@ add_executable(tests
         test.cpp
         ../src/Btree.h
         ../src/Btree.cpp
-        ../src/StorageManager.cpp
-        ../src/StorageManager.h
+        ../src/FileHeap.cpp
+        ../src/FileHeap.h
         ../src/Pager.cpp
         ../src/Pager.h
         ../src/IOHandler.cpp

@@ -5,6 +5,7 @@
 #include "Pager.h"
 #include "iostream"
 
+Pager* Pager::INSTANCE = nullptr;
 
 /// initialize buffer pool manager and underlying IOHandler
 Pager::Pager() {
@@ -63,6 +64,8 @@ void Pager::writePage(size_t pageNo) {
 
 Pager::~Pager(){
     /// write all files at end of program
+    std::cout << "DELETING PAGER" << std::endl;
+
     for (auto page: buffer) {
         ioHandler->writeBlock(page->contents, page->pageNo);
         delete page;

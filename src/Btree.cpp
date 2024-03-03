@@ -28,6 +28,9 @@ Btree::Btree(vector<Constants::Types>* rowTypeOrder, std::string& name) {
                 break;
         }
     }
+
+    /// Initialize the root node
+    this->root = sPager->getPage(Constants::BTREE_ROOT)->contents;
 }
 
 //// deserializes a string of bytes into their respective data types given a list of types in order
