@@ -13,4 +13,6 @@ add_executable(MicroDB main.cpp
         Btree.cpp
         FileHeap.h
         FileHeap.cpp
+        Table.cpp
+        Table.h
 )

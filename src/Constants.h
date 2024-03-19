@@ -15,6 +15,7 @@ namespace Constants{
         INTEGER = 0,
         CHAR = 1,
         BOOLEAN = 2,
+        SIZE_T = 3
 //        STRING = 3
     };
 

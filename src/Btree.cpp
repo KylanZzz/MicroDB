@@ -7,58 +7,130 @@
 
 using std::vector;
 using std::byte;
-using dataType = std::variant<int, bool, char>;
+using dataType = std::variant<int, bool, char, size_t>;
 
-Btree::Btree(vector<Constants::Types>* rowTypeOrder, std::string& name) {
-    this->rowTypeOrder = rowTypeOrder;
-    this->tableName = name;
-
-    //// initialize row size for easy-of-use in the future
-    rowSize = 0;
-    for (auto type: (*rowTypeOrder)){
-        switch (type) {
-            case Constants::Types::BOOLEAN:
-               rowSize += sizeof (bool);
-               break;
-            case Constants::Types::CHAR:
-                rowSize += sizeof (char);
-                break;
-            case Constants::Types::INTEGER:
-                rowSize += sizeof (int);
-                break;
-        }
-    }
+Btree::Btree(Table& _table): table(_table), rowTypeOrder(_table.getRowTypeOrder()) {
+    table.addBtree(this);
 
     /// Initialize the root node
     this->root = sPager->getPage(Constants::BTREE_ROOT)->contents;
+
+    /// right now, we will designate the first attribute in rowTypeOrder as the indexing key
+    keyIndex = 0;
+}
+
+void Btree::insertRow(vector<dataType>& row) {
+    /// convert row into bytes
+    auto rowBytes = serializeRow(row);
+
+    /// insert row into the fileheap. This is the 'value' of the btree
+    auto rowPointer = sFileHeap->insertTuple(rowBytes);
+
+    /// the key is the first element of row
+    dataType key = row[keyIndex];
+
+}
+
+vector<dataType>* Btree::search(dataType& key) {
+
+}
+
+/// serializes the btree key
+vector<byte>* Btree::serializeKey(dataType& key) {
+
+    auto bytes = new vector<byte>(0);
+
+    switch (rowTypeOrder[keyIndex]){
+        case Constants::Types::BOOLEAN: {
+            bool value = std::get<bool>(key);
+            bytes->resize(sizeof(value));
+            std::memcpy(bytes->data(), &value, sizeof(value));
+            break;
+        }
+        case Constants::Types::INTEGER: {
+            int value = std::get<int>(key);
+            bytes->resize(sizeof(value));
+            std::memcpy(bytes->data(), &value, sizeof(value));
+            break;
+        }
+        case Constants::Types::CHAR: {
+            bool value = std::get<bool>(key);
+            bytes->resize(sizeof(value));
+            std::memcpy(bytes->data(), &value, sizeof(value));
+            break;
+        }
+        case Constants::Types::SIZE_T: {
+            size_t value = std::get<size_t>(key);
+            bytes->resize(sizeof(value));
+            std::memcpy(bytes->data(), &value, sizeof(size_t));
+            break;
+        }
+    }
+
+    return bytes;
+}
+
+/// deserializes the btree key
+dataType Btree::deserializeKey(vector<byte>& bytes) {
+
+    switch (rowTypeOrder[keyIndex]){
+        case Constants::Types::BOOLEAN: {
+            bool value;
+            std::memcpy(&value, bytes.data(), sizeof (bool));
+            return value;
+        }
+        case Constants::Types::INTEGER: {
+            int value;
+            std::memcpy(&value, bytes.data(), sizeof (int));
+            return value;
+        }
+        case Constants::Types::CHAR: {
+            char value;
+            std::memcpy(&value, bytes.data(), sizeof (char));
+            return value;
+        }
+        case Constants::Types::SIZE_T: {
+            size_t value;
+            std::memcpy(&value, bytes.data(), sizeof (size_t));
+            return value;
+        }
+    }
 }
 
 //// deserializes a string of bytes into their respective data types given a list of types in order
-vector<dataType>* Btree::deserializeRow(vector<byte>& fileContents, int startIndex) {
+vector<dataType>* Btree::deserializeRow(vector<byte>& bytes) {
+    int offset = 0;
 
-    auto output = new vector<dataType>(rowTypeOrder->size());
+    auto output = new vector<dataType>(rowTypeOrder.size());
 
-    for (int i = 0; i < rowTypeOrder->size(); ++i) {
-        switch ((*rowTypeOrder)[i]){
+    for (int i = 0; i < rowTypeOrder.size(); ++i) {
+        switch (rowTypeOrder[i]){
             case Constants::Types::BOOLEAN: {
                 bool value;
-                std::memcpy(&value, &fileContents[startIndex], sizeof (bool));
+                std::memcpy(&value, bytes.data() + offset, sizeof (bool));
                 (*output)[i] = value;
-                startIndex += sizeof (bool);
+                offset += sizeof (bool);
                 break;
             }
             case Constants::Types::INTEGER: {
                 int value;
-                std::memcpy(&value, &fileContents[startIndex], sizeof (int ));
+                std::memcpy(&value, bytes.data() + offset, sizeof (int ));
                 (*output)[i] = value;
-                startIndex += sizeof (int);
+                offset += sizeof (int);
                 break;
             }
             case Constants::Types::CHAR: {
                 char value;
-                std::memcpy(&value, &fileContents[startIndex], sizeof (char));
+                std::memcpy(&value, bytes.data() + offset, sizeof (char));
                 (*output)[i] = value;
-                startIndex += sizeof (char);
+                offset += sizeof (char);
+                break;
+            }
+            case Constants::Types::SIZE_T: {
+                size_t value;
+                std::memcpy(&value, bytes.data() + offset, sizeof (size_t));
+                (*output)[i] = value;
+                offset += sizeof (size_t);
                 break;
             }
                 // doing this shit later bc fuck strings
@@ -77,26 +149,11 @@ vector<dataType>* Btree::deserializeRow(vector<byte>& fileContents, int startInd
 //// returns byte representation (in list form) of a list of dataTypes
 vector<byte>* Btree::serializeRow(vector<dataType> &data) {
 
-    size_t numBytes = 0;
-    for (auto type: *rowTypeOrder) {
-        switch (type) {
-            case Constants::Types::BOOLEAN:
-                numBytes += sizeof (bool);
-                break;
-            case Constants::Types::INTEGER:
-                numBytes += sizeof (int);
-                break;
-            case Constants::Types::CHAR:
-                numBytes += sizeof (char);
-                break;
-        }
-    }
-
-    auto outputContent = new vector<byte>(numBytes);
+    auto outputContent = new vector<byte>(table.getRowSize());
     int offset = 0;
 
-    for (int i = 0; i < rowTypeOrder->size(); ++i) {
-        switch ((*rowTypeOrder)[i]) {
+    for (int i = 0; i < rowTypeOrder.size(); ++i) {
+        switch (rowTypeOrder[i]) {
             case Constants::Types::BOOLEAN: {
                 bool value = std::get<bool>(data[i]);
                 std::memcpy(outputContent->data() + offset, &value, sizeof(value));
@@ -111,6 +168,12 @@ vector<byte>* Btree::serializeRow(vector<dataType> &data) {
             }
             case Constants::Types::CHAR: {
                 char value = std::get<char>(data[i]);
+                std::memcpy(outputContent->data() + offset, &value, sizeof(value));
+                offset += sizeof(value);
+                break;
+            }
+            case Constants::Types::SIZE_T: {
+                size_t value = std::get<size_t>(data[i]);
                 std::memcpy(outputContent->data() + offset, &value, sizeof(value));
                 offset += sizeof(value);
                 break;

@@ -8,20 +8,21 @@
 #include <variant>
 #include "Constants.h"
 #include "Pager.h"
+#include "Table.h"
 
 using std::vector;
 using std::byte;
-using dataType = std::variant<int, bool, char>;
+using dataType = std::variant<int, bool, char, size_t>;
 
 class Btree {
 
 private:
-    vector<Constants::Types>* rowTypeOrder; // only valid if IS isLeaf
-    std::string tableName;
-    size_t rowSize;
+    size_t keyIndex;
     vector<byte>* root;
+    Table& table;
+    const vector<Constants::Types>& rowTypeOrder;
 
-    size_t NODE_HEADER_SIZE = sizeof (size_t) + sizeof(bool) + sizeof(bool) + sizeof(size_t) + sizeof(size_t);
+    size_t NODE_HEADER_SIZE = sizeof (size_t) + sizeof(bool) + sizeof(size_t);
     size_t NODE_SIZE = 0;
 
     struct NodeHeader {
@@ -30,19 +31,18 @@ private:
         size_t parentNo; // only valid if NOT root
     };
 
-    struct NodeCell {
-    };
 
 public:
 
+    Btree(Table& table);
 
-    Btree(vector<Constants::Types>* rowTypeOrder, std::string& name);
-
-    vector<dataType>* deserializeRow(vector<byte>& pageContents, int offset);
-
+    void insertRow(vector<dataType>& row);
+    void removeRow(dataType& key);
+    vector<dataType>* search(dataType& key);
+    vector<byte>* serializeKey(dataType& key);
+    dataType deserializeKey(vector<byte>& bytes);
     vector<byte>* serializeRow(vector<dataType>& data);
-
-    NodeHeader* deserializeHeader(vector<byte>& page);
-
-    vector<byte>* serializeHeader(NodeHeader& NodeHeader);
+    vector<dataType>* deserializeRow(vector<byte>& pageContents);
+//    NodeHeader* deserializeHeader(vector<byte>& page);
+//    vector<byte>* serializeHeader(NodeHeader& NodeHeader);
 };

@@ -12,7 +12,7 @@
 #include <catch2/catch_test_macros.hpp>
 #define makeByte(x) static_cast<std::byte>(x)
 
-using dataType = std::variant<int, bool, char>;
+using dataType = std::variant<int, bool, char, size_t>;
 using std::cout;
 using std::endl;
 using std::byte;
@@ -175,3 +175,147 @@ TEST_CASE("Pager writes page to disk works", "[Pager]") {
     FileHeap::deleteInstance();
     Pager::deleteInstance();
 }
+
+TEST_CASE("Btree deserializing row works", "[Btree]") {
+    vector<Constants::Types> rowTypeOrder = {
+            Constants::Types::INTEGER,
+            Constants::Types::BOOLEAN,
+            Constants::Types::CHAR,
+            Constants::Types::SIZE_T,
+    };
+
+    std::string databaseName = "row deserialization test table";
+
+    Table table(rowTypeOrder, databaseName);
+    Btree btree = Btree(table);
+
+    vector<byte> inputBytes = {
+            makeByte(0x11), // start of int
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00), // end of int
+            makeByte(0x01), // start & end of bool
+            makeByte(0x5A), // start & end of char
+            makeByte(0x22), // start of size_t
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00), // end of size_t
+
+    };
+
+    auto deserializedRow = btree.deserializeRow(inputBytes);
+
+    vector<dataType> expectedOutput = {
+            17,
+            true,
+            'Z',
+            static_cast<size_t>(34)
+    };
+
+    REQUIRE(deserializedRow->size() == expectedOutput.size());
+    REQUIRE(*deserializedRow == expectedOutput);
+}
+
+TEST_CASE("Btree serializing row works", "[Btree]") {
+    vector<Constants::Types> rowTypeOrder = {
+            Constants::Types::INTEGER,
+            Constants::Types::BOOLEAN,
+            Constants::Types::CHAR,
+            Constants::Types::SIZE_T,
+    };
+
+    std::string databaseName = "row deserialization test table";
+
+    Table table(rowTypeOrder, databaseName);
+    Btree btree = Btree(table);
+
+    vector<dataType> inputData = {
+            3,
+            true,
+            'D',
+            static_cast<size_t>(38)
+    };
+
+    auto serializedRow = btree.serializeRow(inputData);
+
+    vector<byte> expectedBytes = {
+            makeByte(0x03), // start of int
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00), // end of int
+            makeByte(0x01), // start & end of bool
+            makeByte(0x44), // start & end of char
+            makeByte(0x26), // start of size_t
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00), // end of size_t
+    };
+
+    serializedRow->data();
+    REQUIRE(serializedRow->size() == expectedBytes.size());
+    REQUIRE(*serializedRow == expectedBytes);
+}
+
+TEST_CASE("Btree deserializing key works", "[Btree]") {
+    vector<Constants::Types> rowTypeOrder = {
+            Constants::Types::INTEGER,
+            Constants::Types::BOOLEAN,
+            Constants::Types::CHAR,
+            Constants::Types::SIZE_T,
+    };
+
+    std::string databaseName = "row deserialization test table";
+
+    Table table(rowTypeOrder, databaseName);
+    Btree btree = Btree(table);
+
+    vector<byte> inputBytes = {
+            makeByte(0x14), // 16 + 4 = 20
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00)
+    };
+
+    dataType deserializedKey = btree.deserializeKey(inputBytes);
+    int deserializedKeyAsInteger = *std::get_if<int>(&deserializedKey);
+    int expectedResult = 20;
+
+    REQUIRE(expectedResult == deserializedKeyAsInteger);
+}
+
+TEST_CASE("Btree serializing key works", "[Btree]") {
+    vector<Constants::Types> rowTypeOrder = {
+            Constants::Types::INTEGER,
+            Constants::Types::BOOLEAN,
+            Constants::Types::CHAR,
+            Constants::Types::SIZE_T,
+    };
+
+    std::string databaseName = "row deserialization test table";
+
+    Table table(rowTypeOrder, databaseName);
+    Btree btree = Btree(table);
+
+    dataType inputKey = 58;
+
+    auto serializedKey = btree.serializeKey(inputKey);
+
+    vector<byte> expectedOutput = {
+            makeByte(0x3A), // (3)(16) + 10 = 58
+            makeByte(0x00),
+            makeByte(0x00),
+            makeByte(0x00)
+    };
+
+    REQUIRE(serializedKey->size() == expectedOutput.size());
+    REQUIRE(*serializedKey == expectedOutput);
+}
+

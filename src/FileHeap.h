@@ -21,18 +21,17 @@ private:
     FileHeap(FileHeap&&) = delete;
     FileHeap& operator=(FileHeap&&) = delete;
 
-    struct RowPointer {
-        size_t pageNo;
-        size_t offset;
-        size_t size;
-    };
-
     FileHeap();
     ~FileHeap();
 
     static FileHeap* INSTANCE;
 
 public:
+    struct RowPointer {
+        size_t pageNo;
+        size_t offset;
+        size_t size;
+    };
 
     static FileHeap* getInstance() {
         if (INSTANCE == nullptr) {
