@@ -4,68 +4,79 @@
 
 #include "FileHeap.h"
 #include "iostream"
+#include "exception"
 
 FileHeap* FileHeap::INSTANCE = nullptr;
 
 FileHeap::FileHeap() {
-    pageDirectory = sPager->getPage(Constants::PageNo::PAGE_DIRECTORY)->contents;
-
+    auto pageDirectory = sPager->getPage(Constants::PageNo::PAGE_DIRECTORY);
     /// process the pageDirectory, storing each page along with its # free bytes in a list
 
-    size_t offset = 0;
-    size_t numPages;
-    std::memcpy(&numPages, pageDirectory->data() + offset, sizeof(numPages));
-    offset += sizeof(numPages);
+    if (auto locked = pageDirectory.lock()) {
+        size_t offset = 0;
+        size_t numPages;
+        std::memcpy(&numPages, locked->contents->data() + offset, sizeof(numPages));
+        offset += sizeof(numPages);
 
-    tuplePages = new vector<std::pair<size_t, size_t>>(numPages);
-    for (auto & tuplePage : *tuplePages) {
-        /// initialize each page of pageDirectory
-        size_t pageNo;
-        memcpy(&pageNo, pageDirectory->data() + offset, sizeof(pageNo));
-        offset += sizeof(pageNo);
+        tuplePages.resize(numPages);
+        for (auto& tuplePage : tuplePages) {
+            /// initialize each page of pageDirectory
+            size_t pageNo;
+            memcpy(&pageNo, locked->contents->data() + offset, sizeof(pageNo));
+            offset += sizeof(pageNo);
 
-        size_t freeSpace;
-        memcpy(&freeSpace, pageDirectory->data() + offset, sizeof(freeSpace));
-        offset += sizeof(freeSpace);
+            size_t freeSpace;
+            memcpy(&freeSpace, locked->contents->data() + offset, sizeof(freeSpace));
+            offset += sizeof(freeSpace);
 
-        tuplePage = std::make_pair(pageNo, freeSpace);
+            tuplePage = std::make_pair(pageNo, freeSpace);
+        }
+    } else {
+        throw std::logic_error("Could not get page directory from Pager");
     }
 
 }
 
-///  inserts a tuple into the file heap and returns a rowPointer (page & offset) to the tuple
-/// IMPORTANT: right now changes are written every insertion, which may not be the most optimal
-FileHeap::RowPointer FileHeap::insertTuple(vector<byte>* data) {
-    for (auto & tuplePage : *tuplePages) {
+/// inserts a tuple into the file heap and returns a rowPointer (page & offset) to the tuple
+/// TODO: right now changes are written every insertion, which may not be the most optimal
+FileHeap::RowPointer FileHeap::insertTuple(std::unique_ptr<vector<byte>> tupleData) {
+    for (auto& tuplePage : tuplePages) {
         size_t pageNo = tuplePage.first;
         size_t spaceLeft = tuplePage.second;
-        if (spaceLeft >= data->size()) {
+        if (spaceLeft >= tupleData->size()) {
             /// get page from pager
             auto page = sPager->getPage(pageNo);
+            if (auto locked = page.lock()) {
+                /// insert data
+                size_t offset = Constants::PAGE_SIZE - spaceLeft;
+                std::memcpy(locked->contents->data() + offset,tupleData->data(), tupleData->size());
 
-            /// insert data
-            size_t offset = Constants::PAGE_SIZE - spaceLeft;
-            std::memcpy(page->contents->data() + offset,data->data(), data->size());
+                /// adjust spaceLeft offset
+                tuplePage.second = tuplePage.second - tupleData->size();
 
-            /// adjust spaceLeft offset
-            tuplePage.second = tuplePage.second - data->size();
-
-            sPager->writePage(pageNo);
-            return RowPointer{pageNo, offset, data->size()};
+                sPager->writePage(pageNo);
+                return RowPointer{pageNo, offset, tupleData->size()};
+            } else {
+                throw std::logic_error("Attempting to lock empty weak pointer");
+            }
         }
     }
 
     /// if there is not enough free space in ANY of the pages, make a new one
     auto newPage = sPager->makeNewPage();
 
-    /// insert data
-    std::memcpy(newPage->contents->data(),data->data(), data->size());
+    if (auto locked = newPage.lock()) {
+        /// insert data
+        std::memcpy(locked->contents->data(),tupleData->data(), tupleData->size());
 
-    /// add data into tuplePages
-    tuplePages->emplace_back(newPage->pageNo, Constants::PAGE_SIZE - data->size());
+        /// add data into tuplePages
+        tuplePages.emplace_back(locked->pageNo, Constants::PAGE_SIZE - tupleData->size());
 
-    sPager->writePage(newPage->pageNo);
-    return RowPointer {newPage->pageNo, 0, data->size()};
+        sPager->writePage(locked->pageNo);
+        return RowPointer {locked->pageNo, 0, tupleData->size()};
+    } else {
+        throw std::logic_error("Could not lock weak pointer from Pager");
+    }
 }
 
 void FileHeap::deleteTuple(FileHeap::RowPointer row) {
@@ -75,23 +86,24 @@ void FileHeap::deleteTuple(FileHeap::RowPointer row) {
 FileHeap::~FileHeap() {
     std::cout << "DELETING FILE HEAP" << std::endl;
 
-    /// update page directory
-    size_t offset = 0;
+    auto pageDirectory = sPager->getPage(Constants::PageNo::PAGE_DIRECTORY);
 
-    size_t numPages = tuplePages->size();
-    std::memcpy(pageDirectory->data() ,&numPages, sizeof (numPages));
-    offset += sizeof(numPages);
+    if (auto locked = pageDirectory.lock()) {
+        /// update page directory
+        size_t offset = 0;
 
-    for (auto& tuplePage: *tuplePages) {
-        size_t pageNo = tuplePage.first;
-        std::memcpy(pageDirectory->data() + offset, &pageNo, sizeof(pageNo));
-        offset += sizeof(pageNo);
+        size_t numPages = tuplePages.size();
+        std::memcpy(locked->contents->data() ,&numPages, sizeof (numPages));
+        offset += sizeof(numPages);
 
-        size_t freeSpace = tuplePage.second;
-        std::memcpy(pageDirectory->data() + offset, &freeSpace, sizeof(freeSpace));
-        offset += sizeof(freeSpace);
+        for (const auto& tuplePage: tuplePages) {
+            size_t pageNo = tuplePage.first;
+            std::memcpy(locked->contents->data() + offset, &pageNo, sizeof(pageNo));
+            offset += sizeof(pageNo);
+
+            size_t freeSpace = tuplePage.second;
+            std::memcpy(locked->contents->data() + offset, &freeSpace, sizeof(freeSpace));
+            offset += sizeof(freeSpace);
+        }
     }
-
-    /// free memory
-    delete tuplePages;
 }

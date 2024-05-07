@@ -22,8 +22,6 @@ add_executable(tests
         ../src/IOHandler.cpp
         ../src/IOHandler.h
         ../src/Constants.h
-        ../src/Table.cpp
-        ../src/Table.h
 )
 
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)

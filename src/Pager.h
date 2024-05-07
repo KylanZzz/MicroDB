@@ -16,21 +16,6 @@
 class Pager {
 
 private:
-    /// prevent a bunch of copy constructors/move assignments
-    Pager(const Pager& obj) = delete;
-    Pager& operator=(const Pager& obj) = delete;
-    Pager(Pager&&) = delete;
-    Pager& operator=(Pager&&) = delete;
-
-    struct Page {
-        std::vector<std::byte>* contents;
-        size_t pageNo;
-
-        Page(std::vector<std::byte>* _contents, size_t _pageNo):
-            contents(_contents), pageNo(_pageNo){};
-
-        ~Page() { delete contents; }
-    };
 
     Pager();
     ~Pager();
@@ -38,6 +23,18 @@ private:
     static Pager* INSTANCE;
 
 public:
+    Pager(Pager&& p) = delete;
+    Pager(const Pager& p) = delete;
+    Pager& operator=(const Pager& p) = delete;
+    Pager& operator=(Pager&& p) = delete;
+
+    struct Page {
+        std::unique_ptr<vector<byte>> contents;
+        size_t pageNo;
+
+        Page(std::unique_ptr<vector<byte>> _contents, size_t _pageNo):
+                contents(std::move(_contents)), pageNo(_pageNo){};
+    };
 
     static Pager* getInstance() {
         if (INSTANCE == nullptr) {
@@ -51,12 +48,12 @@ public:
         INSTANCE = nullptr;
     }
 
-    Page* getPage(size_t pageNo);
-    Page* makeNewPage();
+    std::weak_ptr<Page> getPage(size_t pageNo);
+    std::weak_ptr<Page> makeNewPage();
     void writePage(size_t pageNo);
 
 private:
-    std::vector<Page*> buffer;
-    IOHandler* ioHandler;
+    std::vector<std::shared_ptr<Page>> buffer;
+    std::unique_ptr<IOHandler> ioHandler;
     size_t numPages;
 };

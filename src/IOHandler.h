@@ -8,14 +8,17 @@
 #include "vector"
 #include "Constants.h"
 
+using std::vector;
+using std::byte;
+
 class IOHandler {
 public:
     IOHandler();
     ~IOHandler();
 
-    void writeBlock(std::vector<std::byte>* dataBuffer, size_t blockIndex);
-    size_t addBlock(std::vector<std::byte>* dataBuffer);
-    void getBlock(std::vector<std::byte>* dataBuffer, size_t blockIndex);
+    void writeBlock(std::unique_ptr<vector<byte>> dataBuffer, size_t blockIndex);
+    std::pair<std::unique_ptr<vector<byte>>, size_t> createBlock();
+    std::unique_ptr<vector<byte>> getBlock(size_t blockIndex);
     int openFile(const std::string& fileName);
     size_t getNumBlocks() { return numBlocks; }
 

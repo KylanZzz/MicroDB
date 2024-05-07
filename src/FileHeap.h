@@ -15,18 +15,18 @@ using std::byte;
 class FileHeap {
 
 private:
-    /// prevent a bunch of copy constructors/move assignments
-    FileHeap(const FileHeap& obj) = delete;
-    FileHeap& operator=(const FileHeap& obj) = delete;
-    FileHeap(FileHeap&&) = delete;
-    FileHeap& operator=(FileHeap&&) = delete;
-
     FileHeap();
     ~FileHeap();
 
     static FileHeap* INSTANCE;
 
 public:
+    /// prevent copy constructors/move assignments
+    FileHeap(const FileHeap& f) = delete;
+    FileHeap(FileHeap&&) = delete;
+    FileHeap& operator=(const FileHeap& f) = delete;
+    FileHeap& operator=(FileHeap&&) = delete;
+
     struct RowPointer {
         size_t pageNo;
         size_t offset;
@@ -45,12 +45,10 @@ public:
         INSTANCE = nullptr;
     }
 
-    RowPointer insertTuple(vector<byte>* data);
+    RowPointer insertTuple(std::unique_ptr<vector<byte>> data);
     void deleteTuple(RowPointer row);
 
 private:
-    vector<byte>* pageDirectory;
-
     /// page number || bytes of free space remaining
-    vector<std::pair<size_t , size_t>>* tuplePages;
+    vector<std::pair<size_t , size_t>> tuplePages;
 };

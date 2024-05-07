@@ -8,6 +8,9 @@
 #include <sys/stat.h>
 #include <iostream>
 
+using std::vector;
+using std::byte;
+
 IOHandler::IOHandler() {
     fileDescriptor = openFile(Constants::DATABASE_FILE);
 
@@ -19,16 +22,18 @@ IOHandler::IOHandler() {
 
 /// takes in an existing page and writes it to disk
 /// IMPORTANT right now I'm flushing changes after every write (for testing purposes) but may not be the most optimal
-void IOHandler::writeBlock(std::vector<std::byte>* dataBuffer, size_t blockIndex) {
-
+void IOHandler::writeBlock(std::unique_ptr<vector<byte>> dataBuffer, size_t blockIndex) {
     pwrite(fileDescriptor, dataBuffer->data(),Constants::PAGE_SIZE, blockIndex * Constants::PAGE_SIZE);
     fsync(fileDescriptor);
 }
 
 /// copies disk block into a page contents
-void IOHandler::getBlock(std::vector<std::byte>* dataBuffer, size_t blockIndex) {
-
+std::unique_ptr<vector<byte>> IOHandler::getBlock(size_t blockIndex) {
+    auto dataBuffer = std::make_unique<vector<byte>>();
+    dataBuffer->reserve(Constants::PAGE_SIZE);
     pread(fileDescriptor, dataBuffer->data(),Constants::PAGE_SIZE, blockIndex * Constants::PAGE_SIZE);
+
+    return dataBuffer;
 }
 
 /// opens a file for both reading and writing, returning the file descriptor
@@ -37,9 +42,11 @@ int IOHandler::openFile(const std::string& fileName) {
 }
 
 /// adds a new block of data to file and returns the block index
-size_t IOHandler::addBlock(std::vector<std::byte> *dataBuffer) {
+std::pair<std::unique_ptr<vector<byte>>, size_t> IOHandler::createBlock() {
+    auto dataBuffer = std::make_unique<vector<byte>>();
+    dataBuffer->reserve(Constants::PAGE_SIZE);
     pwrite(fileDescriptor, dataBuffer->data(), Constants::PAGE_SIZE, numBlocks * Constants::PAGE_SIZE);
-    return numBlocks++;
+    return std::make_pair(std::move(dataBuffer), numBlocks++);
 }
 
 IOHandler::~IOHandler() {
