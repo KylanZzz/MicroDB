@@ -16,10 +16,14 @@ public:
     IOHandler();
     ~IOHandler();
 
+    IOHandler(IOHandler&& i) = delete;
+    IOHandler(const IOHandler& i) = delete;
+    IOHandler& operator=(IOHandler&& i) = delete;
+    IOHandler& operator=(const IOHandler& i) = delete;
+
     void writeBlock(std::unique_ptr<vector<byte>> dataBuffer, size_t blockIndex);
     std::pair<std::unique_ptr<vector<byte>>, size_t> createBlock();
     std::unique_ptr<vector<byte>> getBlock(size_t blockIndex);
-    int openFile(const std::string& fileName);
     size_t getNumBlocks() { return numBlocks; }
 
 

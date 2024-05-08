@@ -10,6 +10,8 @@ Pager* Pager::INSTANCE = nullptr;
 
 /// initialize buffer pool manager and underlying IOHandler
 Pager::Pager() {
+    std::cout << "CONSTRUCTING PAGER" << std::endl;
+
     ioHandler = std::make_unique<IOHandler>();
     numPages = 0;
 }
@@ -48,12 +50,10 @@ std::weak_ptr<Pager::Page> Pager::makeNewPage() {
 
 /// this is done very inefficiently right now, will redo later
 void Pager::writePage(size_t pageNo) {
-    for (const auto& page: buffer) {
-//        if (page.use_count() > 1) {
-//            throw std::logic_error("Page has use_count greater than 1");
-//        }
-        if (page->pageNo == pageNo) {
-            ioHandler->writeBlock(std::move(page->contents), pageNo);
+    for (auto pageIt = buffer.begin(); pageIt != buffer.end(); ++pageIt) {
+        if ((*pageIt)->pageNo == pageNo) {
+            ioHandler->writeBlock(std::move((*pageIt)->contents), pageNo);
+            buffer.erase(pageIt);
             return;
         }
     }

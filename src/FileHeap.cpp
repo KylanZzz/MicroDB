@@ -9,6 +9,8 @@
 FileHeap* FileHeap::INSTANCE = nullptr;
 
 FileHeap::FileHeap() {
+    std::cout << "CONSTRUCTING FILE HEAP" << std::endl;
+
     auto pageDirectory = sPager->getPage(Constants::PageNo::PAGE_DIRECTORY);
     /// process the pageDirectory, storing each page along with its # free bytes in a list
 
@@ -72,8 +74,13 @@ FileHeap::RowPointer FileHeap::insertTuple(std::unique_ptr<vector<byte>> tupleDa
         /// add data into tuplePages
         tuplePages.emplace_back(locked->pageNo, Constants::PAGE_SIZE - tupleData->size());
 
-        sPager->writePage(locked->pageNo);
-        return RowPointer {locked->pageNo, 0, tupleData->size()};
+        size_t pageNo = locked->pageNo;
+        locked.reset();
+
+        /// TODO: This line is for testing, you SHOULD NOT write after each insertion
+        sPager->writePage(pageNo);
+
+        return RowPointer {pageNo, 0, tupleData->size()};
     } else {
         throw std::logic_error("Could not lock weak pointer from Pager");
     }
