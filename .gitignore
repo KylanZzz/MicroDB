@@ -9,3 +9,6 @@ dataSources.local.xml
 
 # Cmake files
 cmake-build-debug/
+
+#DS_Store
+.DS_Store
