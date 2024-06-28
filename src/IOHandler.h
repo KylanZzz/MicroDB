@@ -24,7 +24,7 @@ public:
     void writeBlock(std::unique_ptr<vector<byte>> dataBuffer, size_t blockIndex);
     std::pair<std::unique_ptr<vector<byte>>, size_t> createBlock();
     std::unique_ptr<vector<byte>> getBlock(size_t blockIndex);
-    size_t getNumBlocks() { return numBlocks; }
+    size_t getNumBlocks() const { return numBlocks; }
 
 
 private:

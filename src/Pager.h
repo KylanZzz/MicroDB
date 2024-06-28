@@ -5,7 +5,7 @@
 #pragma once
 
 #include <cstddef>
-#include "vector"
+#include <vector>
 #include "IOHandler.h"
 #include "FileHeap.h"
 
@@ -54,6 +54,6 @@ public:
 
 private:
     std::vector<std::shared_ptr<Page>> buffer;
-    std::unique_ptr<IOHandler> ioHandler;
+    IOHandler ioHandler;
     size_t numPages;
 };

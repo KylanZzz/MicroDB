@@ -12,7 +12,6 @@
 #include <catch2/catch_test_macros.hpp>
 #define makeByte(x) static_cast<std::byte>(x)
 
-using dataType = std::variant<int, bool, char, size_t>;
 using std::cout;
 using std::endl;
 using std::byte;

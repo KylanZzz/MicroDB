@@ -12,7 +12,6 @@ Pager* Pager::INSTANCE = nullptr;
 Pager::Pager() {
     std::cout << "CONSTRUCTING PAGER" << std::endl;
 
-    ioHandler = std::make_unique<IOHandler>();
     numPages = 0;
 }
 
@@ -21,7 +20,7 @@ Pager::Pager() {
 /// THROWS: invalid_argument
 std::weak_ptr<Pager::Page> Pager::getPage(size_t pageNo) {
     /// check if pageNo is out of bounds
-    if (ioHandler->getNumBlocks() <= pageNo) {
+    if (ioHandler.getNumBlocks() <= pageNo) {
         throw std::invalid_argument("PageNo exceeds the total number of blocks");
     }
 
@@ -34,7 +33,7 @@ std::weak_ptr<Pager::Page> Pager::getPage(size_t pageNo) {
     }
 
     /// if not then get page from IO
-    auto contents = ioHandler->getBlock(pageNo);
+    auto contents = ioHandler.getBlock(pageNo);
     buffer.emplace_back(std::make_shared<Page>(std::move(contents), pageNo));
     numPages++;
     return std::weak_ptr<Page>{buffer.back()};
@@ -42,7 +41,7 @@ std::weak_ptr<Pager::Page> Pager::getPage(size_t pageNo) {
 
 /// creates a new empty page in disk and stores it in buffer pool
 std::weak_ptr<Pager::Page> Pager::makeNewPage() {
-    auto data = ioHandler->createBlock();
+    auto data = ioHandler.createBlock();
     buffer.emplace_back(std::make_shared<Page>(Page(std::move(data.first), data.second)));
     numPages++;
     return std::weak_ptr<Page>{buffer.back()};
@@ -52,7 +51,7 @@ std::weak_ptr<Pager::Page> Pager::makeNewPage() {
 void Pager::writePage(size_t pageNo) {
     for (auto pageIt = buffer.begin(); pageIt != buffer.end(); ++pageIt) {
         if ((*pageIt)->pageNo == pageNo) {
-            ioHandler->writeBlock(std::move((*pageIt)->contents), pageNo);
+            ioHandler.writeBlock(std::move((*pageIt)->contents), pageNo);
             buffer.erase(pageIt);
             return;
         }
@@ -65,8 +64,6 @@ Pager::~Pager(){
     std::cout << "DELETING PAGER" << std::endl;
 
     for (auto& page: buffer) {
-        ioHandler->writeBlock(std::move(page->contents), page->pageNo);
+        ioHandler.writeBlock(std::move(page->contents), page->pageNo);
     }
-
-    ioHandler.reset();
 }
